@@ -1,7 +1,7 @@
 import { compose, Middleware } from 'app-builder'
 import { AnnotatedPropertyDescription } from 'reflect-annotations'
 import { parseJsonBody } from './body-parser'
-import { RouteAnnotation } from './annotations'
+import { RouteAnnotation, parametersMetadataKey, ParamResolver } from './annotations'
 import { RouterContext } from './context'
 import { Type } from './type'
 
@@ -73,9 +73,21 @@ export class Handler<T extends RouterContext<T>> {
   }
 
   _resolveRouteMiddleware() {
-    const routeName = this.controllerMethod
+    const routeName = this.controllerMethod,
+      paramResolvers: (ParamResolver | undefined)[] = Reflect.getMetadata(parametersMetadataKey, this.controller.prototype, routeName) || [undefined]
+
     return (context: T, next: () => Promise<any>) => {
-      return Promise.resolve(context.route.controllerInstance[routeName](context.req))
+      const controllerMethod = context.route.controllerInstance[routeName],
+         params = []
+      for (let i = 0; i < paramResolvers.length; i++) {
+        const paramResolver = paramResolvers[i]
+        if (paramResolver) {
+          params[i] = paramResolver(context)
+        } else {
+          params[i] = context.req
+        }
+      }
+      return Promise.resolve(controllerMethod.apply(context.route.controllerInstance, params))
         .then(x => {
           context.body = x
           return next()

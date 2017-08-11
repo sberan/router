@@ -1,4 +1,5 @@
 import { createAnnotationFactory } from 'reflect-annotations'
+import { RouterContext } from "./context";
 
 const trim = (x: string) => x.replace(/^\/+|\/+$/g, ''),
   result = (x: string) => '/' + trim(x),
@@ -65,3 +66,33 @@ export const Route = <Route>methods.reduce((set, method) => {
   set[method].toString = () => method
   return set
 }, <any>createAnnotationFactory(RouteAnnotation))
+
+export const parametersMetadataKey = Symbol('parametersMetadataKey')
+
+export type ParamResolver = (context: RouterContext<any>) => any
+
+function createParamResolverDecorator(resolver: ParamResolver) {
+  return (target: any, propertyKey: string | symbol, parameterIndex: number) => {
+    let existingParamResolvers: ParamResolver[] = Reflect.getOwnMetadata(parametersMetadataKey, target, propertyKey) || []
+    existingParamResolvers[parameterIndex] = resolver
+    Reflect.defineMetadata(parametersMetadataKey, existingParamResolvers, target, propertyKey)
+  }
+}
+
+export const Param = {
+  Body () {
+    return createParamResolverDecorator((context) => context.req.body)
+  },
+
+  Route (paramName: string) {
+    return createParamResolverDecorator((context) => context.req.params[paramName])
+  },
+
+  Query (paramName: string) {
+    return createParamResolverDecorator((context) => context.req.query[paramName])
+  },
+
+  Header (paramName: string) {
+    return createParamResolverDecorator((context) => context.req.headers[paramName])
+  }
+}

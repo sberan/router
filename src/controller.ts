@@ -6,7 +6,7 @@ export interface ControllerOptions {
 }
 
 export interface Controller {
-  (options?: ControllerOptions): ClassDecorator
+  (options?: ControllerOptions | string): ClassDecorator
 }
 
 export type ControllerDecorator = Controller & ClassDecorator
@@ -19,7 +19,7 @@ export class ControllerCollector {
     this._collector = (target: any) => {
       this.collected.push(target)
     }
-    this.collect = (options?: ControllerOptions | any) => {
+    const collect = (options?: ControllerOptions | any) => {
       if (!options) {
         return this._collector
       }
@@ -32,6 +32,6 @@ export class ControllerCollector {
       }
       return this._collector(options) as ClassDecorator
     }
-
+    this.collect = collect as any //FIXME
   }
 }
