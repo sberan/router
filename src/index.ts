@@ -21,13 +21,37 @@ export interface RouterOptions<T> {
   isRoutable?: (routeDefinition: RouteMetadata) => boolean
   getMethods?: (routeDefinition: RouteMetadata) => string[]
   getPath?: (baseUrl: string, routeDefinition: RouteMetadata) => string
+  defaultTypeConverters?: TypeConverter<any>[]
 }
 
 export interface Middleware<T extends RouterContext<T>> {
   (context: T, next: GenericMiddleware<T>): any
 }
 
-const defaultOptions = {
+export interface TypeConverter<T> {
+  type: Type<T> | ((type: Type<T>) => boolean)
+  fromString(value: string): T
+  fromJSON(value: any): T
+}
+
+const defaultTypeConverters: TypeConverter<any>[] = [{
+  type: Number,
+  fromString: Number,
+  fromJSON: Number
+},{
+  type: String,
+  fromString: (x) => x,
+  fromJSON: (x) => x === null ? '' : x.toString()
+},{
+  type: Boolean,
+  fromString (str) {
+    return str ? str.toLowerCase() === 'true' : false
+  },
+  fromJSON: Boolean
+}]
+
+const defaultOptions: RouterOptions<any> = {
+  defaultTypeConverters,
   resolveController (ctx: any, ctrl: Type<any>) {
     if (ctx.scope && typeof ctx.scope.get === 'function') {
       this.resolveController = (context: any, controller: Type<any>) => context.scope.get(controller)
@@ -47,10 +71,12 @@ export class Router<T extends RouterContext<T>> {
 
   public handlers: Handler<T>[]
   public Controller: ControllerDecorator = this._controllerCollector.collect
+  public readonly typeConverters: TypeConverter<any>[]
 
   constructor (options: RouterOptions<T> = {}) {
     this._options = Object.assign({}, defaultOptions, options)
     this.routers = {}
+    this.typeConverters = this._options.defaultTypeConverters || []
   }
 
   _initialize () {

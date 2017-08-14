@@ -50,11 +50,17 @@ function extractBodyParser (route: RouteMetadata) {
   return bodyParser ? bodyParser.middleware : parseJsonBody
 }
 
+interface ParamResolver {
+  (context: RouterContext<any>): any
+}
+
 export class Handler<T extends RouterContext<T>> {
   public handler: Handler<T>
   public controllerMethod: string
   public controller: Type<any>
   public invokeAsync: Middleware<T>
+  private paramAnnotations: any[]
+  private paramResolvers: ParamResolver[]
 
   constructor (
       public source: RouteMetadata,
@@ -70,27 +76,44 @@ export class Handler<T extends RouterContext<T>> {
       ...extractMiddleware(source),
       this._resolveRouteMiddleware()
     ])
+    this.paramAnnotations = this.source.parameterAnnotations.length
+      ? Array.from(this.source.parameterAnnotations) : [undefined]
+
+    this.paramResolvers.map(this.extractParameter)
+      .map(this.convertType)
   }
 
-  _resolveMethodParameters (context: RouterContext<any>) {
-    const paramAnnotations = this.source.parameterAnnotations.length ? this.source.parameterAnnotations : [undefined],
-      resolvedParameters: any[] = []
-    for (let i = 0; i < paramAnnotations.length; i++) {
-      const annotation = paramAnnotations[i]
-      if (annotation && (annotation as ParamAnnotation).extractValue) {
-        resolvedParameters[i] = (annotation as ParamAnnotation).extractValue(context)
+  extractParameter (annotation: any): ParamResolver {
+    const isParamAnnotation = annotation && (annotation as ParamAnnotation).extractValue
+    return (context: RouterContext<any>) => {
+      if (isParamAnnotation) {
+        return (annotation as ParamAnnotation).extractValue(context)
       } else {
-        resolvedParameters[i] = context.req
+        return context.req
       }
+    }
+  }
+
+  convertType (paramResolver: ParamResolver): ParamResolver {
+
+  }
+
+
+  resolveParameters (params: ParamResolver[], context: RouterContext<any>) {
+    const resolvedParameters: any[] = []
+    for (let i = 0; i < paramResolvers.length; i++) {
+      const resolver = paramResolvers[i]
+      resolvedParameters[i] = resolver(context)
     }
     return resolvedParameters
   }
 
   _resolveRouteMiddleware () {
-    const routeName = this.controllerMethod
+    const routeName = this.controllerMethod,
+      controllerMethod = this.controller.prototype[routeName]
+
     return (context: T, next: () => Promise<any>) => {
-      const controllerMethod = context.route.controllerInstance[routeName],
-        params = this._resolveMethodParameters(context)
+      const params = this.paramResolvers.reduce(this.resolveParameters)
 
       return Promise.resolve(controllerMethod.apply(context.route.controllerInstance, params))
         .then(x => {

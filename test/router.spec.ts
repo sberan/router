@@ -114,6 +114,15 @@ describe('Routing', () => {
         return a + ' ' + b
       }
     }
+
+    @Controller('type-conversion')
+    class TypeConversion {
+      @Route.Post('booleans/:b1')
+      booleanConversion(@Param.Body() body: boolean, @Param.Path('b1') path: boolean, @Param.Header('bool-header') header: boolean) {
+        return JSON.stringify([body, path, header])
+      }
+    }
+
     server.use(router)
     return server.listen(8888)
   })
@@ -210,6 +219,13 @@ describe('Routing', () => {
     it('should supply the request by default', () => {
       return getAsync('/api/param-lookup/default-lookup/asdf/foo').then((res) => {
         expect(res).to.eql('asdf foo')
+      })
+    })
+  })
+  describe('type conversion', () => {
+    it('should convert a boolean parameter', () => {
+      return postAsync('/api/type-conversion/booleans/true', 'true', { 'bool-header' : 'true' }).then((res) => {
+        expect(res).to.eql(JSON.stringify([true, true, true]))
       })
     })
   })
