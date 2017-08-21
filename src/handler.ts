@@ -9,7 +9,8 @@ import { TypeConverter } from './index'
 export type RouteMetadata = AnnotatedPropertyDescription & { controller: Type<any> }
 
 const supportedHttpMethods: Array<string> = ['GET','POST', 'PUT', 'DELETE', 'HEAD', 'PATCH'],
-  isRouteAnnotation = (x: any) => x.isRouteAnnotation
+  isRouteAnnotation = (x: any) => x.isRouteAnnotation,
+  pickRequest = (context:RouterContext<any>) => context.req
 
 export function getPath (baseUrl = '/', route: RouteMetadata): string {
   const parent = route.classAnnotations.find(isRouteAnnotation) as RouteAnnotation | undefined,
@@ -62,13 +63,10 @@ function resolveParameters (params: ParamResolver[], context: RouterContext<any>
 
 function extractParameter (annotation: any): ParamResolver {
   const isParamAnnotation = annotation && (annotation as ParamAnnotation).extractValue
-  return (context: RouterContext<any>) => {
-    if (isParamAnnotation) {
-      return (annotation as ParamAnnotation).extractValue!(context)
-    } else {
-      return context.req
-    }
+  if (!isParamAnnotation) {
+    return pickRequest
   }
+  return context => (annotation as ParamAnnotation).extractValue!(context)
 }
 
 export interface ParamResolver {
