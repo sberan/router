@@ -8,7 +8,8 @@ import {
   Router,
   BaseRouterContext,
   ParseBody,
-  Param
+  Param,
+  ParamAnnotation
 } from '../src'
 
 const getAsync = (url:string) => get(`http://localhost:8888${url}`),
@@ -30,6 +31,14 @@ class MyCustomPredicateType {
 }
 
 class MyUnknownType { }
+
+class MyParamAnnotation implements ParamAnnotation {
+  extractValue(context: MyContext) {
+    return '42'
+  }
+}
+
+const MyParam = createAnnotationFactory(MyParamAnnotation)
 
 describe('Routing', () => {
   let server: Server<MyContext>,
@@ -169,6 +178,11 @@ describe('Routing', () => {
       @Route.Get('custom-predicate/:value')
       customPredicateTypeConversion(@Param.Path('value') custom: MyCustomPredicateType) {
         return JSON.stringify(custom.value)
+      }
+
+      @Route.Get('custom-annotation')
+      customAnnotation (@MyParam() someParam: number) {
+        return someParam
       }
     }
 
@@ -363,6 +377,12 @@ describe('Routing', () => {
       } catch (err) {
         expect(err.message).to.eql('no type converter found for type: MyUnknownType')
       }
+    })
+
+    it('should allow custom parameter annotations', () => {
+      return getAsync('/api/type-conversion/custom-annotation').then((res) => {
+        expect(res).to.eql(JSON.stringify(42))
+      })
     })
   })
 })

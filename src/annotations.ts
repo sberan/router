@@ -68,20 +68,19 @@ export const Route = <Route>methods.reduce((set, method) => {
 }, <any>createAnnotationFactory(RouteAnnotation))
 
 export interface ParamAnnotation {
-  extractValue?(context: RouterContext<any>): any
-  convertType?<T>(value: any): any
+  extractValue? (context: RouterContext<any>, paramType?: Function): any
 }
 
 class BodyParamAnnotation implements ParamAnnotation {
-  extractValue(context: RouterContext<any>) {
+  extractValue (context: RouterContext<any>) {
     return context.req.body
   }
 }
 
 class PathParamAnnotation implements ParamAnnotation {
-  constructor(private paramName: string) {}
+  constructor (private paramName: string) {}
 
-  extractValue(context: RouterContext<any>) {
+  extractValue (context: RouterContext<any>) {
     return context.req.params[this.paramName]
   }
 }
@@ -89,7 +88,7 @@ class PathParamAnnotation implements ParamAnnotation {
 class QueryParamAnnotation implements ParamAnnotation {
   constructor(private paramName: string) {}
 
-  extractValue(context: RouterContext<any>) {
+  extractValue (context: RouterContext<any>) {
     return context.req.query[this.paramName]
   }
 }
@@ -97,7 +96,7 @@ class QueryParamAnnotation implements ParamAnnotation {
 class HeaderParamAnnotation implements ParamAnnotation {
   constructor(private paramName: string) {}
 
-  extractValue(context: RouterContext<any>) {
+  extractValue (context: RouterContext<any>) {
     return context.req.headers[this.paramName]
   }
 }

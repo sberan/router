@@ -61,14 +61,6 @@ function resolveParameters (params: ParamResolver[], context: RouterContext<any>
   return resolvedParameters
 }
 
-function extractParameter (annotation: any): ParamResolver {
-  const isParamAnnotation = annotation && (annotation as ParamAnnotation).extractValue
-  if (!isParamAnnotation) {
-    return pickRequest
-  }
-  return context => (annotation as ParamAnnotation).extractValue!(context)
-}
-
 export interface ParamResolver {
   (context: RouterContext<any>): any
 }
@@ -100,7 +92,7 @@ export class Handler<T extends RouterContext<T>> {
         ? this.source.parameterAnnotations : [undefined]
 
     this.paramResolvers = this.paramAnnotations
-      .map(extractParameter)
+      .map((x, i) => this.extractParameter(x, i))
       .map((x, i) => this.convertType(x, i))
 
     this.invokeAsync = compose([
@@ -110,8 +102,21 @@ export class Handler<T extends RouterContext<T>> {
     ])
   }
 
+  paramTypeAtIndex (paramIndex: number) {
+    return this.source.types && this.source.types.parameters && this.source.types.parameters[paramIndex]
+  }
+
+  extractParameter (annotation: any, paramIndex: number): ParamResolver {
+    const isParamAnnotation = annotation && (annotation as ParamAnnotation).extractValue
+    if (!isParamAnnotation) {
+      return pickRequest
+    }
+    const paramType = this.paramTypeAtIndex(paramIndex)
+    return context => (annotation as ParamAnnotation).extractValue!(context, paramType)
+  }
+
   convertType (paramResolver: ParamResolver, paramIndex: number): ParamResolver {
-    const paramType = this.source.types.parameters && this.source.types.parameters[paramIndex]
+    const paramType = this.paramTypeAtIndex(paramIndex)
     if (!paramType || paramType === Object) {
       return paramResolver
     }
