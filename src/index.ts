@@ -1,6 +1,6 @@
 import { reflectAnnotations, AnnotatedPropertyDescription } from 'reflect-annotations'
 import RouteRecognizer = require('route-recognizer')
-import { Middleware as GenericMiddleware } from 'app-builder'
+import { Middleware as GenericMiddleware, Next } from 'app-builder'
 import { IncomingMessage, ServerResponse } from 'http'
 import {
   createHandler,
@@ -25,7 +25,7 @@ export interface RouterOptions<T> {
 }
 
 export interface Middleware<T extends RouterContext<T>> {
-  (context: T, next: GenericMiddleware<T>): any
+  (context: T, next: Next<T>): any
 }
 
 export interface ExactTypeConverter<T> {
