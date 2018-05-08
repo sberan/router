@@ -123,6 +123,11 @@ describe('Routing', () => {
         return data
       }
 
+      @Route.Post('body-key-lookup')
+      bodyParamKeyLookup (@Param.Body('key') data: any) {
+        return data
+      }
+
       @Route.Get('path-param-lookup/:id')
       pathParamLookup (@Param.Path('id') id: string) {
         return id
@@ -258,6 +263,18 @@ describe('Routing', () => {
     it('should look up a body param', () => {
       return postAsync('/api/param-lookup/body-lookup', 'content').then((res) => {
         expect(res).to.eql('content')
+      })
+    })
+
+    it('should look up a body param by key', () => {
+      return postAsync('/api/param-lookup/body-key-lookup', { key: 'content' }).then((res) => {
+        expect(res).to.eql('content')
+      })
+    })
+
+    it('should return undefined when looking up a key for a null body', () => {
+      return postAsync('/api/param-lookup/body-key-lookup', null).then((res) => {
+        expect(res).to.eql('OK')
       })
     })
 
